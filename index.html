@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Azzurra · Painel de Reservas</title>
+<style>
+  :root{
+    --wine:#7a1f2b; --wine-dark:#5c141d; --cream:#fff8f3; --card:#fff;
+    --gold:#b8860b; --ink:#2b2220; --muted:#8a7d78; --line:#ecdfd8;
+    --ok:#1d7a4d; --warn:#a86a00; --cancel:#9a3b34; --purple:#6b3fa0;
+    --shadow:0 6px 24px rgba(92,20,29,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#fdeee7,var(--cream));color:var(--ink);
+    font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5}
+  .wrap{max-width:680px;margin:0 auto;padding:18px 14px 60px}
+  header.top{text-align:center;padding:8px 6px 2px}
+  .kicker{letter-spacing:.18em;text-transform:uppercase;font-size:11.5px;color:var(--gold);font-weight:700}
+  h1{font-family:Georgia,serif;font-weight:600;margin:5px 0 1px;font-size:24px;color:var(--wine)}
+  .sub{color:var(--muted);font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:16px;margin:13px 0;box-shadow:var(--shadow)}
+  label{display:block;font-size:13px;color:var(--muted);margin:11px 0 5px;font-weight:600}
+  input,select,textarea{width:100%;border:1.5px solid var(--line);border-radius:11px;padding:11px;font-size:16px;font-family:inherit;background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--wine)}
+  textarea{min-height:52px;resize:vertical}
+  .btn{display:inline-block;border:0;border-radius:12px;background:var(--wine);color:#fff;font-size:16px;font-weight:600;padding:13px 16px;cursor:pointer;transition:.15s;text-align:center}
+  .btn:hover{background:var(--wine-dark)} .btn.block{display:block;width:100%} .btn:disabled{opacity:.6;cursor:default}
+  .btn.ghost{background:#fff;color:var(--wine);border:1.5px solid var(--wine)} .btn.ghost:hover{background:#fff4f1}
+  .btn.sm{font-size:14px;padding:9px 12px;border-radius:10px}
+  .btn.big{padding:18px;font-size:17px;display:flex;justify-content:space-between;align-items:center}
+  .link{background:none;border:0;color:var(--wine);text-decoration:underline;cursor:pointer;font-size:14px}
+  .err{color:#b3261e;font-size:13.5px;margin-top:9px;min-height:1px}
+  .hidden{display:none!important}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .slotbar{display:flex;gap:10px;margin-bottom:8px}
+  .slotbtn{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:13px;padding:10px;cursor:pointer;text-align:center;transition:.15s}
+  .slotbtn.sel{border-color:var(--wine);background:#fff4f1;box-shadow:0 0 0 3px rgba(122,31,43,.08)}
+  .slotbtn .h{font-family:Georgia,serif;font-size:20px;color:var(--wine);font-weight:600}
+  .slotbtn .c{font-size:12.5px;color:var(--muted)} .slotbtn .c b{color:var(--ink)}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted);margin:2px 2px 4px}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .sw{width:12px;height:12px;border-radius:4px;border:1px solid rgba(0,0,0,.08)}
+  .maphint{font-size:12px;color:var(--muted);margin:2px 2px 8px}
+  .mapscroll{overflow-x:auto}
+  .maparea{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;min-width:340px}
+  .toprow{display:flex;gap:8px}
+  .tile{border:1.5px solid var(--line);border-radius:12px;padding:8px 6px;min-height:74px;cursor:pointer;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:2px;background:#fff;transition:.12s}
+  .tile:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+  .tile .mn{font-weight:700;font-size:13.5px}
+  .tile .seats{font-size:10.5px;color:var(--muted)}
+  .tile .who{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile .st{font-size:10.5px;font-weight:600}
+  .livre{background:#f4faf6;border-color:#cfe9da} .livre .st{color:var(--ok)}
+  .aguardando{background:#fff4dc;border-color:#f0dca0} .aguardando .st{color:var(--warn)}
+  .confirmada{background:#e8f6ee;border-color:#bfe6cf} .confirmada .st{color:var(--ok)}
+  .reservada{background:#efe7f5;border-color:#dcccf0} .reservada .st{color:var(--purple)}
+  #tip{position:fixed;transform:translate(-50%,-100%);background:#2b2220;color:#fff;padding:8px 11px;border-radius:9px;font-size:12.5px;max-width:230px;z-index:60;pointer-events:none;display:none;box-shadow:0 8px 20px rgba(0,0,0,.2);line-height:1.4}
+  #tip b{color:#ffd9a0}
+  .ov{position:fixed;inset:0;background:rgba(40,20,18,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:80}
+  .ov .panel{background:#fff;border-radius:16px;padding:18px;max-width:440px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.25);max-height:90vh;overflow:auto}
+  .ov h2{margin:0 0 4px;font-size:18px}
+  .pill{font-size:12px;padding:3px 10px;border-radius:999px;font-weight:600;border:1px solid transparent;display:inline-block}
+  .pill.aguardando{background:#fff2dc;color:var(--warn);border-color:#f0dca0}
+  .pill.confirmada{background:#e8f6ee;color:var(--ok);border-color:#bfe6cf}
+  .pill.reservada{background:#efe7f5;color:var(--purple);border-color:#dcccf0}
+  .kv{background:#faf4f1;border-radius:12px;padding:12px 14px;margin:12px 0;font-size:15px}
+  .kv div{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
+  .kv span:first-child{color:var(--muted)}
+  .wa{background:#0a7a33;color:#fff;border-radius:10px;padding:10px 12px;font-size:14px;font-weight:600;text-decoration:none;display:inline-block;text-align:center}
+  .slotlabel{font-size:16px;font-weight:600;padding:11px;background:#faf4f1;border-radius:11px}
+  .muted{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="kicker">Ristorante Azzurra</div>
+    <h1>Painel de Reservas</h1>
+    <div class="sub">Dia dos Namorados &middot; 12 de junho de 2026</div>
+  </header>
+
+  <section id="loginScreen">
+    <div class="card">
+      <label for="pwd">Senha da equipe</label>
+      <input id="pwd" type="password" placeholder="Digite a senha" onkeydown="if(event.key==='Enter')login()">
+      <button class="btn block" id="loginBtn" style="margin-top:14px" onclick="login()">Entrar</button>
+      <div class="err" id="loginErr"></div>
+    </div>
+  </section>
+
+  <section id="homeScreen" class="hidden">
+    <div class="card">
+      <button class="btn block big" onclick="goMap()"><span>Mapa das mesas</span><span>&rarr;</span></button>
+      <button class="btn block big ghost" style="margin-top:10px" onclick="goList()"><span>Lista de reservas</span><span>&rarr;</span></button>
+      <div style="text-align:center;margin-top:14px"><button class="link" onclick="logout()">Sair</button></div>
+    </div>
+  </section>
+
+  <section id="mapScreen" class="hidden">
+    <div class="card">
+      <div class="slotbar">
+        <div class="slotbtn" id="sb19" onclick="setSlot('19:00')"><div class="h">19:00</div><div class="c"><b id="free19">–</b> livres de 9</div></div>
+        <div class="slotbtn" id="sb21" onclick="setSlot('21:00')"><div class="h">21:00</div><div class="c"><b id="free21">–</b> livres de 8</div></div>
+      </div>
+      <div class="legend">
+        <span><i class="sw" style="background:#f4faf6;border-color:#cfe9da"></i>Livre</span>
+        <span><i class="sw" style="background:#fff4dc;border-color:#f0dca0"></i>Aguardando</span>
+        <span><i class="sw" style="background:#e8f6ee;border-color:#bfe6cf"></i>Confirmada</span>
+      </div>
+      <div class="maphint">A mesa grande vira as mesas 9 e 10 às 19h; e a mesa 5 (8 lugares) às 21h.</div>
+      <div class="mapscroll"><div class="maparea" id="map"></div></div>
+      <div class="toolbar" style="margin-top:12px">
+        <button class="btn ghost sm" onclick="goHome()">&larr; Voltar</button>
+        <div><button class="link" onclick="reloadMap()" style="margin-right:12px">Atualizar</button><button class="btn sm" onclick="openForm({})">+ Nova reserva</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="listScreen" class="hidden">
+    <div class="card">
+      <div class="toolbar"><button class="btn ghost sm" onclick="goHome()">&larr; Voltar</button><button class="link" onclick="exportCSV()">Exportar CSV</button></div>
+      <div id="listBody" style="margin-top:8px"></div>
+    </div>
+  </section>
+</div>
+
+<div id="tip"></div>
+
+<div class="ov hidden" id="detailOv"><div class="panel">
+  <h2 id="dTitle">Mesa</h2>
+  <div id="dStatus"></div>
+  <div class="kv" id="dBody"></div>
+  <div id="dActions" style="display:flex;gap:9px;flex-wrap:wrap"></div>
+  <div style="text-align:center;margin-top:12px"><button class="btn ghost sm" onclick="closeOv()">&larr; Voltar</button></div>
+</div></div>
+
+<div class="ov hidden" id="formOv"><div class="panel">
+  <h2 id="fTitle">Nova reserva</h2>
+  <label>Horário</label>
+  <div class="slotlabel" id="f_horario">19:00</div>
+  <label for="f_mesa">Mesa</label>
+  <select id="f_mesa" onchange="onMesaChange()"></select>
+  <div class="slotlabel hidden" id="f_mesaLabel"></div>
+  <label for="f_nome">Nome</label>
+  <input id="f_nome" type="text" placeholder="Ex.: Marcos e Júlia">
+  <label for="f_tel">WhatsApp / telefone</label>
+  <input id="f_tel" type="tel" inputmode="tel" placeholder="(11) 90000-0000">
+  <label for="f_pessoas">Pessoas</label>
+  <select id="f_pessoas"></select>
+  <label for="f_status">Status</label>
+  <select id="f_status"><option value="aguardando">Aguardando confirmação</option><option value="confirmada">Confirmada</option></select>
+  <label for="f_obs">Observações</label>
+  <textarea id="f_obs" placeholder="Aniversário, alergia, pedido especial..."></textarea>
+  <div class="err" id="formErr"></div>
+  <div style="display:flex;gap:9px;margin-top:14px">
+    <button class="btn ghost sm" style="flex:1" onclick="closeOv()">&larr; Voltar</button>
+    <button class="btn sm" style="flex:2" id="saveBtn" onclick="saveReserva()">Salvar reserva</button>
+  </div>
+</div></div>
+
+<script>
+  var SUPA="https://zuieqbiesotjflnhaqft.supabase.co";
+  var API=SUPA+"/functions/v1/api";
+  var ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1aWVxYmllc290amZsbmhhcWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODQ1MzIsImV4cCI6MjA5NjM2MDUzMn0.xDRvjJdXhkPh7D-1cv5CCCl_bceXnAf3B55a_wCrJjM";
+
+  var POS={'1':[1,2],'2':[2,2],'3':[3,2],'4':[4,2],'6':[5,2],'8':[2,3],'7':[4,3]};
+  var reservas=[];
+  var curSlot='19:00', editId=null, fSlot=null, pwd=null, dragId=null;
+
+  function apiCall(action,extra){
+    return fetch(API,{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
+      body:JSON.stringify(Object.assign({password:pwd,action:action},extra||{}))});
+  }
+
+  function slotsFor(h){
+    if(h==='19:00') return ['1','2','3','4','6','7','8','9','10'].map(function(n){return {mesa:n,cap:2};});
+    return ['1','2','3','4','6','7','8'].map(function(n){return {mesa:n,cap:2};}).concat([{mesa:'5',cap:8}]);
+  }
+  function capOf(h,mesa){ return (mesa==='5'&&h==='21:00')?8:2; }
+  function resForKey(h,mesa){ return reservas.find(function(r){ return r.horario===h && String(r.mesa)===String(mesa) && r.status!=='cancelada'; }); }
+  function freeCount(h){ return slotsFor(h).filter(function(s){return !resForKey(h,s.mesa);}).length; }
+  function cellState(mesa){ var r=resForKey(curSlot,mesa); return r?{key:r.status,res:r}:{key:'livre',res:null}; }
+  function labelOf(k){ return k==='confirmada'?'Confirmada':k==='aguardando'?'Aguardando':'Livre'; }
+  function firstName(s){ return String(s).split(' ').slice(0,2).join(' '); }
+
+  function show(id){ ['loginScreen','homeScreen','mapScreen','listScreen'].forEach(function(s){document.getElementById(s).classList.add('hidden');}); document.getElementById(id).classList.remove('hidden'); window.scrollTo(0,0); }
+
+  async function login(){
+    var p=document.getElementById('pwd').value; var err=document.getElementById('loginErr'); var btn=document.getElementById('loginBtn');
+    if(!p){ err.textContent='Digite a senha.'; return; }
+    err.textContent=''; btn.disabled=true; btn.textContent='Entrando...';
+    try{
+      var res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},body:JSON.stringify({password:p,action:'list'})});
+      if(res.status===401){ err.textContent='Senha incorreta.'; return; }
+      if(!res.ok){ err.textContent='Erro ao conectar. Tente de novo.'; return; }
+      var j=await res.json(); reservas=j.data||[]; pwd=p; show('homeScreen');
+    }catch(e){ err.textContent='Sem conexão. Verifique a internet.'; }
+    finally{ btn.disabled=false; btn.textContent='Entrar'; }
+  }
+  function logout(){ pwd=null; reservas=[]; document.getElementById('pwd').value=''; show('loginScreen'); }
+  function goHome(){ show('homeScreen'); }
+  async function goMap(){ show('mapScreen'); setSlot(curSlot); await reloadMap(); }
+  async function goList(){ await refresh(); renderList(); show('listScreen'); }
+  async function reloadMap(){ await refresh(); renderMap(); }
+
+  async function refresh(){ try{ var r=await apiCall('list',{}); var j=await r.json(); if(j.data) reservas=j.data; }catch(e){} }
+
+  function setSlot(s){
+    curSlot=s;
+    document.getElementById('sb19').classList.toggle('sel',s==='19:00');
+    document.getElementById('sb21').classList.toggle('sel',s==='21:00');
+    renderMap();
+  }
+  function renderMap(){
+    document.getElementById('free19').textContent=freeCount('19:00');
+    document.getElementById('free21').textContent=freeCount('21:00');
+    var html='';
+    if(curSlot==='19:00'){ html+='<div class="toprow" style="grid-column:2/5;grid-row:1">'+tileHTML('9','flex:1')+tileHTML('10','flex:1')+'</div>'; }
+    else { html+=m5_21(); }
+    html+=tileHTML('1','grid-column:1;grid-row:2')+tileHTML('2','grid-column:2;grid-row:2')+tileHTML('3','grid-column:3;grid-row:2')+tileHTML('4','grid-column:4;grid-row:2')+tileHTML('6','grid-column:5;grid-row:2');
+    html+=tileHTML('8','grid-column:2;grid-row:3')+tileHTML('7','grid-column:4;grid-row:3');
+    document.getElementById('map').innerHTML=html;
+  }
+  function tileHTML(n,style){
+    var st=cellState(n);
+    var drag=st.res?(' draggable="true" ondragstart="onDragStart(event,\''+st.res.id+'\')"'):'';
+    return '<div class="tile '+st.key+'" style="'+style+'"'+drag+' ondragover="onDragOver(event)" ondrop="onDrop(event,\''+n+'\')" '+
+      'onmouseenter="showTip(event,\''+n+'\')" onmousemove="moveTip(event)" onmouseleave="hideTip()" onclick="clickSlot(\''+n+'\')">'+
+      '<div class="mn">Mesa '+n+'</div>'+(st.res?'<div class="who">'+esc(firstName(st.res.nome))+'</div>':'<div class="seats">2 lug.</div>')+
+      '<div class="st">'+labelOf(st.key)+'</div></div>';
+  }
+  function m5_21(){
+    var st=cellState('5');
+    var drag=st.res?(' draggable="true" ondragstart="onDragStart(event,\''+st.res.id+'\')"'):'';
+    return '<div class="tile '+st.key+'" style="grid-column:2/5;grid-row:1"'+drag+' ondragover="onDragOver(event)" ondrop="onDrop(event,\'5\')" onmouseenter="showTip(event,\'5\')" onmousemove="moveTip(event)" onmouseleave="hideTip()" onclick="clickSlot(\'5\')">'+
+      '<div class="mn">Mesa 5 · grupo de 8</div>'+(st.res?'<div class="who">'+esc(st.res.nome)+'</div>':'<div class="seats">8 lugares</div>')+'<div class="st">'+labelOf(st.key)+'</div></div>';
+  }
+
+  function showTip(e,mesa){
+    var st=cellState(mesa); var tip=document.getElementById('tip');
+    var head='<b>Mesa '+mesa+'</b> · ';
+    if(st.key==='livre'){ tip.innerHTML=head+'Livre<br>clique para reservar'; }
+    else{ var r=st.res; tip.innerHTML=head+labelOf(st.key)+'<br>'+esc(r.nome)+' · '+r.pessoas+(r.pessoas>1?' pessoas':' pessoa')+(r.tel?'<br>'+esc(r.tel):''); }
+    tip.style.display='block'; moveTip(e);
+  }
+  function moveTip(e){ var t=e.currentTarget; var tip=document.getElementById('tip'); if(t){var r=t.getBoundingClientRect(); tip.style.left=(r.left+r.width/2)+'px'; tip.style.top=(r.top-8)+'px';} }
+  function hideTip(){ document.getElementById('tip').style.display='none'; }
+
+  function clickSlot(mesa){ hideTip(); var r=resForKey(curSlot,mesa); if(r) openDetail(r.id); else openForm({mesa:mesa,horario:curSlot}); }
+  function onDragStart(e,id){ dragId=id; try{e.dataTransfer.setData('text/plain',id);e.dataTransfer.effectAllowed='move';}catch(_){ } hideTip(); }
+  function onDragOver(e){ e.preventDefault(); try{e.dataTransfer.dropEffect='move';}catch(_){ } }
+  async function onDrop(e,mesa){ e.preventDefault(); var id=dragId; dragId=null; if(!id) return; var occ=resForKey(curSlot,mesa); if(occ){ if(occ.id!==id) alert('A mesa '+mesa+' já está ocupada. Arraste para uma mesa livre, ou use Editar para trocar.'); return; } await moveReserva(id,mesa); }
+  async function moveReserva(id,mesa){ try{ var res=await apiCall('update',{id:id,data:{mesa:mesa}}); var j=await res.json(); if(!res.ok){ alert(j.code==='23505'?'Essa mesa já está ocupada.':'Erro ao mover a reserva.'); return; } await refresh(); renderMap(); }catch(e){ alert('Sem conexão. Tente de novo.'); } }
+
+  function openDetail(id){
+    var r=reservas.find(function(x){return x.id===id;});
+    document.getElementById('dTitle').textContent='Mesa '+r.mesa+' · '+r.horario;
+    document.getElementById('dStatus').innerHTML='<span class="pill '+r.status+'">'+labelOf(r.status)+'</span>';
+    document.getElementById('dBody').innerHTML=kv('Nome',r.nome)+kv('Pessoas',r.pessoas)+(r.tel?kv('Contato',r.tel):'')+(r.obs?kv('Obs.',r.obs):'');
+    var wa=waLink(r);
+    document.getElementById('dActions').innerHTML=(wa?'<a class="wa" href="'+wa+'" target="_blank" rel="noopener">WhatsApp</a>':'')+
+      '<button class="btn ghost sm" onclick="cycleStatus(\''+r.id+'\')">Mudar status</button>'+
+      '<button class="btn ghost sm" onclick="openForm({edit:\''+r.id+'\'})">Editar</button>'+
+      '<button class="btn ghost sm" onclick="delReserva(\''+r.id+'\')">Excluir</button>';
+    openOv('detailOv');
+  }
+  function kv(k,v){ return '<div><span>'+k+'</span><span><b>'+esc(v)+'</b></span></div>'; }
+
+  function openForm(opts){
+    opts=opts||{}; editId=opts.edit||null;
+    document.getElementById('formErr').textContent='';
+    var r=editId?reservas.find(function(x){return x.id===editId;}):null;
+    var horario=r?r.horario:(opts.horario||curSlot);
+    document.getElementById('fTitle').textContent=editId?'Editar reserva':'Nova reserva';
+    document.getElementById('f_horario').textContent=horario;
+    var sel=document.getElementById('f_mesa'), lbl=document.getElementById('f_mesaLabel');
+    if(opts.mesa!==undefined && !editId){
+      var mesa=opts.mesa;
+      fSlot={horario:horario,mesa:mesa,cap:capOf(horario,mesa)};
+      sel.classList.add('hidden'); lbl.classList.remove('hidden');
+      lbl.textContent='Mesa '+mesa+(mesa==='5'&&horario==='21:00'?' (grupo de 8)':'');
+      fillPessoas(fSlot.cap, fSlot.cap===8?8:2);
+    } else {
+      lbl.classList.add('hidden'); sel.classList.remove('hidden');
+      var cur=r?String(r.mesa):null;
+      var livres=slotsFor(horario).filter(function(s){return !resForKey(horario,s.mesa) || String(s.mesa)===cur;});
+      sel.innerHTML=livres.length?livres.map(function(s){return '<option value="'+s.mesa+'">'+slotName(s,horario)+'</option>';}).join(''):'<option value="">Sem mesas livres</option>';
+      var ini=cur||(livres[0]&&livres[0].mesa);
+      if(ini){ sel.value=ini; fSlot={horario:horario,mesa:ini,cap:capOf(horario,ini)}; fillPessoas(fSlot.cap, r?r.pessoas:(fSlot.cap===8?8:2)); }
+      else { fSlot=null; fillPessoas(2,2); }
+    }
+    document.getElementById('f_nome').value=r?r.nome:'';
+    document.getElementById('f_tel').value=r?(r.tel||''):'';
+    document.getElementById('f_status').value=r?(r.status==='cancelada'?'aguardando':r.status):'aguardando';
+    document.getElementById('f_obs').value=r?(r.obs||''):'';
+    openOv('formOv');
+  }
+  function slotName(s,h){ if(s.mesa==='5'&&h==='21:00') return 'Mesa 5 · grupo (8)'; return 'Mesa '+s.mesa; }
+  function onMesaChange(){
+    var v=document.getElementById('f_mesa').value; if(!v){fSlot=null;return;}
+    var h=document.getElementById('f_horario').textContent;
+    fSlot={horario:h,mesa:v,cap:capOf(h,v)}; fillPessoas(fSlot.cap, fSlot.cap===8?8:2);
+  }
+  function fillPessoas(cap,val){
+    var sel=document.getElementById('f_pessoas'); var o='';
+    for(var i=1;i<=cap;i++) o+='<option value="'+i+'">'+i+(i>1?' pessoas':' pessoa')+'</option>';
+    sel.innerHTML=o; sel.value=String(Math.min(val||2,cap));
+  }
+  async function saveReserva(){
+    var nome=document.getElementById('f_nome').value.trim();
+    var tel=document.getElementById('f_tel').value.trim();
+    var pessoas=Number(document.getElementById('f_pessoas').value);
+    var status=document.getElementById('f_status').value;
+    var obs=document.getElementById('f_obs').value.trim();
+    var err=document.getElementById('formErr'); var btn=document.getElementById('saveBtn');
+    if(!fSlot){ err.textContent='Não há mesa livre neste horário.'; return; }
+    if(nome.length<2){ err.textContent='Informe o nome.'; return; }
+    err.textContent=''; btn.disabled=true; btn.textContent='Salvando...';
+    try{
+      var res;
+      if(editId){ res=await apiCall('update',{id:editId,data:{mesa:fSlot.mesa,nome:nome,tel:tel,pessoas:pessoas,status:status,obs:obs}}); }
+      else { res=await apiCall('create',{data:{horario:fSlot.horario,mesa:fSlot.mesa,nome:nome,pessoas:pessoas,tel:tel,status:status,obs:obs}}); }
+      var j=await res.json();
+      if(!res.ok){ err.textContent=(j.code==='23505')?'Essa mesa já está ocupada neste horário.':'Erro ao salvar. Tente de novo.'; return; }
+      closeOv(); await refresh(); renderMap();
+    }catch(e){ err.textContent='Sem conexão. Tente de novo.'; }
+    finally{ btn.disabled=false; btn.textContent='Salvar reserva'; }
+  }
+  async function delReserva(id){ if(!confirm('Excluir esta reserva?'))return; try{ await apiCall('delete',{id:id}); closeOv(); await refresh(); renderMap(); }catch(e){ alert('Erro ao excluir.'); } }
+  async function cycleStatus(id){
+    var r=reservas.find(function(x){return x.id===id;});
+    var order=['aguardando','confirmada','cancelada'];
+    var next=order[(order.indexOf(r.status)+1)%order.length];
+    try{
+      var res=await apiCall('update',{id:id,data:{status:next}}); var j=await res.json();
+      if(!res.ok){ alert(j.code==='23505'?'Não dá para reativar: a mesa já está ocupada.':'Erro ao atualizar.'); return; }
+      await refresh(); renderMap();
+      if(next==='cancelada') closeOv(); else openDetail(id);
+    }catch(e){ alert('Sem conexão.'); }
+  }
+  function waLink(r){
+    var d=(r.tel||'').replace(/\D/g,''); if(!d) return null; if(d.length<=11) d='55'+d;
+    var msg='Olá '+r.nome+'! Sua reserva na Azzurra para o Dia dos Namorados (12/06) às '+r.horario+' (mesa '+r.mesa+', '+r.pessoas+(r.pessoas>1?' pessoas':' pessoa')+') está confirmada. Até lá! ♥';
+    return 'https://wa.me/'+d+'?text='+encodeURIComponent(msg);
+  }
+  function renderList(){
+    var arr=reservas.slice().filter(function(r){return r.status!=='cancelada';}).sort(function(a,b){ return a.horario!==b.horario?(a.horario<b.horario?-1:1):(String(a.mesa).localeCompare(String(b.mesa),undefined,{numeric:true})); });
+    document.getElementById('listBody').innerHTML='<h2 style="font-size:17px;margin:6px 0 6px">Reservas ('+arr.length+')</h2>'+(arr.length?arr.map(function(r){
+      return '<div style="border-bottom:1px solid var(--line);padding:9px 2px;display:flex;justify-content:space-between;gap:10px">'+
+        '<div><b>'+esc(r.nome)+'</b><div style="font-size:13px;color:var(--muted)">'+r.horario+' · mesa '+r.mesa+' · '+r.pessoas+'p'+(r.tel?' · '+esc(r.tel):'')+'</div></div>'+
+        '<span class="pill '+r.status+'">'+labelOf(r.status)+'</span></div>';
+    }).join(''):'<div class="muted">Nenhuma reserva ainda.</div>');
+  }
+  function openOv(id){ document.getElementById(id).classList.remove('hidden'); }
+  function closeOv(){ document.getElementById('detailOv').classList.add('hidden'); document.getElementById('formOv').classList.add('hidden'); editId=null; }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function exportCSV(){
+    var head='Horario,Mesa,Nome,Pessoas,Contato,Status,Observacoes\n';
+    var b=reservas.map(function(r){ return [r.horario,r.mesa,q(r.nome),r.pessoas,q(r.tel||''),r.status,q(r.obs||'')].join(','); }).join('\n');
+    var blob=new Blob([head+b],{type:'text/csv;charset=utf-8;'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='reservas-azzurra-12-06.csv'; a.click();
+  }
+  function q(s){ return '"'+String(s).replace(/"/g,'""')+'"'; }
+</script>
+</body>
+</html>
