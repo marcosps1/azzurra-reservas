@@ -41,14 +41,18 @@
   .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted);margin:2px 2px 8px}
   .legend span{display:inline-flex;align-items:center;gap:5px}
   .sw{width:12px;height:12px;border-radius:4px;border:1px solid rgba(0,0,0,.08)}
-  .maparea{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+  .reorgbar{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff4d6;border:1px solid #f0dca0;border-radius:11px;padding:8px 12px;margin-bottom:8px;font-size:13px;color:#8a6d0b}
+  .mapscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .maparea{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;min-width:380px}
   .tile{border:1.5px solid var(--line);border-radius:12px;padding:8px 6px;min-height:74px;cursor:pointer;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:2px;background:#fff;transition:.12s}
   .tile:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
   .tile[draggable="true"]{cursor:grab}
+  .tile.move{outline:2px dashed #d8a24a;outline-offset:-3px}
   .tile .mn{font-weight:700;font-size:13.5px}
   .tile .seats{font-size:10.5px;color:var(--muted)}
   .tile .who{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .tile .st{font-size:10.5px;font-weight:600}
+  .cell{border:1.5px dashed var(--line);border-radius:12px;min-height:74px;background:#fcf8f5}
   .livre{background:#f4faf6;border-color:#cfe9da} .livre .st{color:var(--ok)}
   .aguardando{background:#fff4dc;border-color:#f0dca0} .aguardando .st{color:var(--warn)}
   .confirmada{background:#e8f6ee;border-color:#bfe6cf} .confirmada .st{color:var(--ok)}
@@ -111,10 +115,11 @@
         <span><i class="sw" style="background:#fff4dc;border-color:#f0dca0"></i>Aguardando</span>
         <span><i class="sw" style="background:#e8f6ee;border-color:#bfe6cf"></i>Confirmada</span>
       </div>
-      <div class="maparea" id="map"></div>
+      <div id="reorgBar" class="reorgbar hidden"><span>Arraste as mesas para reposicionar (no PC).</span><button class="btn sm" onclick="toggleReorg()">Concluir</button></div>
+      <div class="mapscroll"><div class="maparea" id="map"></div></div>
       <div class="toolbar" style="margin-top:12px">
         <button class="btn ghost sm" onclick="goHome()">&larr; Voltar</button>
-        <div><button class="link" onclick="reloadMap()" style="margin-right:12px">Atualizar</button><button class="btn sm" onclick="openForm({})">+ Nova reserva</button></div>
+        <div><button class="link" id="reorgBtn" onclick="toggleReorg()" style="margin-right:12px">Reorganizar</button><button class="link" onclick="reloadMap()" style="margin-right:12px">Atualizar</button><button class="btn sm" onclick="openForm({})">+ Nova reserva</button></div>
       </div>
     </div>
   </section>
@@ -129,7 +134,7 @@
   <section id="mesasScreen" class="hidden">
     <div class="card">
       <div class="toolbar"><button class="btn ghost sm" onclick="goHome()">&larr; Voltar</button><button class="btn sm" onclick="openMesaForm()">+ Adicionar mesa</button></div>
-      <div class="muted" style="margin-top:8px">Defina as mesas do salão: nome, capacidade e em quais horários cada uma aparece.</div>
+      <div class="muted" style="margin-top:8px">Defina as mesas do salão: nome, capacidade e em quais horários cada uma aparece. Para reposicionar no mapa, use "Reorganizar".</div>
       <div id="mesasBody" style="margin-top:8px"></div>
     </div>
   </section>
@@ -193,7 +198,7 @@
   var ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1aWVxYmllc290amZsbmhhcWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODQ1MzIsImV4cCI6MjA5NjM2MDUzMn0.xDRvjJdXhkPh7D-1cv5CCCl_bceXnAf3B55a_wCrJjM";
 
   var reservas=[], mesas=[];
-  var curSlot='19:00', editId=null, fSlot=null, pwd=null, dragId=null, mesaEditId=null;
+  var curSlot='19:00', editId=null, fSlot=null, pwd=null, dragId=null, mesaEditId=null, reorgMode=false, dragTableId=null;
 
   function apiCall(action,extra){
     return fetch(API,{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
@@ -224,8 +229,9 @@
     finally{ btn.disabled=false; btn.textContent='Entrar'; }
   }
   function logout(){ pwd=null; reservas=[]; mesas=[]; document.getElementById('pwd').value=''; show('loginScreen'); }
-  function goHome(){ show('homeScreen'); }
-  async function goMap(){ show('mapScreen'); setSlot(curSlot); await reloadMap(); }
+  function exitReorg(){ reorgMode=false; document.getElementById('reorgBar').classList.add('hidden'); document.getElementById('reorgBtn').textContent='Reorganizar'; }
+  function goHome(){ exitReorg(); show('homeScreen'); }
+  async function goMap(){ exitReorg(); show('mapScreen'); setSlot(curSlot); await reloadMap(); }
   async function goList(){ await refresh(); renderList(); show('listScreen'); }
   async function goMesas(){ await refresh(); renderMesas(); show('mesasScreen'); }
   async function reloadMap(){ await refresh(); renderMap(); }
@@ -243,18 +249,64 @@
     document.getElementById('free21').textContent=freeCount('21:00');
     document.getElementById('tot19').textContent=mesasFor('19:00').length;
     document.getElementById('tot21').textContent=mesasFor('21:00').length;
-    var arr=slotsFor(curSlot);
-    var html=arr.map(function(s){ return tileHTML(s.mesa,s.cap); }).join('');
-    document.getElementById('map').innerHTML=arr.length?html:'<div class="muted" style="padding:12px">Nenhuma mesa neste horário. Use "Configurar mesas".</div>';
+    var act=mesasFor(curSlot);
+    if(!act.length){ document.getElementById('map').innerHTML='<div class="muted" style="padding:12px">Nenhuma mesa neste horário. Use "Configurar mesas".</div>'; return; }
+    if(reorgMode){ renderMapReorg(act); return; }
+    document.getElementById('map').innerHTML=act.map(function(m){ return tileHTML(m,false); }).join('');
   }
-  function tileHTML(n,cap){
+  function tileHTML(m,reorg){
+    var n=m.nome, cap=m.capacidade;
     var st=cellState(n);
-    var span=cap>=4?' style="grid-column:span 2"':'';
+    var pos='grid-column:'+(m.coluna||1)+(cap>=4?' / span 2':'')+';grid-row:'+(m.linha||1);
+    if(reorg){
+      return '<div class="tile '+st.key+' move" style="'+pos+'" draggable="true" ondragstart="onTableDragStart(event,\''+m.id+'\')" ondragover="onDragOver(event)" ondrop="onCellDrop(event,'+(m.linha||1)+','+(m.coluna||1)+')">'+
+        '<div class="mn">Mesa '+esc(n)+'</div>'+(st.res?'<div class="who">'+esc(firstName(st.res.nome))+'</div>':'<div class="seats">'+cap+' lug.</div>')+'</div>';
+    }
     var drag=st.res?(' draggable="true" ondragstart="onDragStart(event,\''+st.res.id+'\')"'):'';
-    return '<div class="tile '+st.key+'"'+span+drag+' ondragover="onDragOver(event)" ondrop="onDrop(event,\''+jss(n)+'\')" '+
+    return '<div class="tile '+st.key+'" style="'+pos+'"'+drag+' ondragover="onDragOver(event)" ondrop="onDrop(event,\''+jss(n)+'\')" '+
       'onmouseenter="showTip(event,\''+jss(n)+'\')" onmousemove="moveTip(event)" onmouseleave="hideTip()" onclick="clickSlot(\''+jss(n)+'\')">'+
       '<div class="mn">Mesa '+esc(n)+'</div>'+(st.res?'<div class="who">'+esc(firstName(st.res.nome))+'</div>':'<div class="seats">'+cap+' lug.</div>')+
       '<div class="st">'+labelOf(st.key)+'</div></div>';
+  }
+  function renderMapReorg(act){
+    var occ={};
+    act.forEach(function(m){ var span=(m.capacidade>=4)?2:1; for(var k=0;k<span;k++){ occ[(m.linha||1)+','+((m.coluna||1)+k)]=(k===0?m:'cov'); } });
+    var maxR=act.reduce(function(a,m){return Math.max(a,m.linha||1);},1)+1;
+    var html='';
+    for(var r=1;r<=maxR;r++){
+      for(var c=1;c<=5;c++){
+        var o=occ[r+','+c];
+        if(o==='cov') continue;
+        if(o){ html+=tileHTML(o,true); }
+        else { html+='<div class="cell" style="grid-column:'+c+';grid-row:'+r+'" ondragover="onDragOver(event)" ondrop="onCellDrop(event,'+r+','+c+')"></div>'; }
+      }
+    }
+    document.getElementById('map').innerHTML=html;
+  }
+  function toggleReorg(){
+    reorgMode=!reorgMode;
+    document.getElementById('reorgBar').classList.toggle('hidden',!reorgMode);
+    document.getElementById('reorgBtn').textContent=reorgMode?'Concluir':'Reorganizar';
+    renderMap();
+  }
+  function onTableDragStart(e,id){ dragTableId=id; try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',id);}catch(_){ } }
+  async function onCellDrop(e,r,c){
+    e.preventDefault();
+    var id=dragTableId; dragTableId=null;
+    if(!id) return;
+    var src=mesas.find(function(m){return m.id===id;});
+    if(!src || (src.linha===r && src.coluna===c)) return;
+    var act=mesasFor(curSlot);
+    var tgt=act.find(function(m){return m.linha===r && m.coluna===c && m.id!==id;});
+    try{
+      if(tgt){
+        await apiCall('mesa_update',{id:src.id,data:{linha:r,coluna:c}});
+        await apiCall('mesa_update',{id:tgt.id,data:{linha:src.linha,coluna:src.coluna}});
+      } else {
+        await apiCall('mesa_update',{id:src.id,data:{linha:r,coluna:c}});
+      }
+      await refresh(); renderMap();
+    }catch(err){ alert('Erro ao reposicionar.'); }
   }
 
   function showTip(e,mesa){
@@ -411,7 +463,11 @@
     try{
       var res;
       if(mesaEditId){ res=await apiCall('mesa_update',{id:mesaEditId,data:{nome:nome,capacidade:cap,em_19:e19,em_21:e21}}); }
-      else { var ordem=mesas.reduce(function(a,m){return Math.max(a,m.ordem||0);},0)+1; res=await apiCall('mesa_add',{data:{nome:nome,capacidade:cap,em_19:e19,em_21:e21,ordem:ordem}}); }
+      else {
+        var ordem=mesas.reduce(function(a,m){return Math.max(a,m.ordem||0);},0)+1;
+        var linha=mesas.reduce(function(a,m){return Math.max(a,m.linha||1);},1)+1;
+        res=await apiCall('mesa_add',{data:{nome:nome,capacidade:cap,em_19:e19,em_21:e21,ordem:ordem,linha:linha,coluna:1}});
+      }
       var j=await res.json();
       if(!res.ok){ err.textContent='Erro ao salvar a mesa.'; return; }
       closeOv(); await refresh(); renderMesas(); renderMap();
