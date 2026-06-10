@@ -38,15 +38,13 @@
   .slotbtn.sel{border-color:var(--wine);background:#fff4f1;box-shadow:0 0 0 3px rgba(122,31,43,.08)}
   .slotbtn .h{font-family:Georgia,serif;font-size:20px;color:var(--wine);font-weight:600}
   .slotbtn .c{font-size:12.5px;color:var(--muted)} .slotbtn .c b{color:var(--ink)}
-  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted);margin:2px 2px 4px}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted);margin:2px 2px 8px}
   .legend span{display:inline-flex;align-items:center;gap:5px}
   .sw{width:12px;height:12px;border-radius:4px;border:1px solid rgba(0,0,0,.08)}
-  .maphint{font-size:12px;color:var(--muted);margin:2px 2px 8px}
-  .mapscroll{overflow-x:auto}
-  .maparea{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;min-width:340px}
-  .toprow{display:flex;gap:8px}
+  .maparea{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
   .tile{border:1.5px solid var(--line);border-radius:12px;padding:8px 6px;min-height:74px;cursor:pointer;text-align:center;display:flex;flex-direction:column;justify-content:center;gap:2px;background:#fff;transition:.12s}
   .tile:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+  .tile[draggable="true"]{cursor:grab}
   .tile .mn{font-weight:700;font-size:13.5px}
   .tile .seats{font-size:10.5px;color:var(--muted)}
   .tile .who{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -54,7 +52,12 @@
   .livre{background:#f4faf6;border-color:#cfe9da} .livre .st{color:var(--ok)}
   .aguardando{background:#fff4dc;border-color:#f0dca0} .aguardando .st{color:var(--warn)}
   .confirmada{background:#e8f6ee;border-color:#bfe6cf} .confirmada .st{color:var(--ok)}
-  .reservada{background:#efe7f5;border-color:#dcccf0} .reservada .st{color:var(--purple)}
+  .mrow{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:10px 2px}
+  .badge{font-size:11px;padding:2px 8px;border-radius:999px;background:#f0e7e3;color:var(--muted);border:1px solid var(--line);margin-left:4px}
+  .badge.on{background:#e8f6ee;color:var(--ok);border-color:#bfe6cf}
+  .chk{display:flex;gap:18px;margin-top:6px}
+  .chk label{display:flex;align-items:center;gap:7px;font-weight:400;color:var(--ink);font-size:15px;margin:0}
+  .chk input{width:auto}
   #tip{position:fixed;transform:translate(-50%,-100%);background:#2b2220;color:#fff;padding:8px 11px;border-radius:9px;font-size:12.5px;max-width:230px;z-index:60;pointer-events:none;display:none;box-shadow:0 8px 20px rgba(0,0,0,.2);line-height:1.4}
   #tip b{color:#ffd9a0}
   .ov{position:fixed;inset:0;background:rgba(40,20,18,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:80}
@@ -63,13 +66,12 @@
   .pill{font-size:12px;padding:3px 10px;border-radius:999px;font-weight:600;border:1px solid transparent;display:inline-block}
   .pill.aguardando{background:#fff2dc;color:var(--warn);border-color:#f0dca0}
   .pill.confirmada{background:#e8f6ee;color:var(--ok);border-color:#bfe6cf}
-  .pill.reservada{background:#efe7f5;color:var(--purple);border-color:#dcccf0}
   .kv{background:#faf4f1;border-radius:12px;padding:12px 14px;margin:12px 0;font-size:15px}
   .kv div{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
   .kv span:first-child{color:var(--muted)}
   .wa{background:#0a7a33;color:#fff;border-radius:10px;padding:10px 12px;font-size:14px;font-weight:600;text-decoration:none;display:inline-block;text-align:center}
   .slotlabel{font-size:16px;font-weight:600;padding:11px;background:#faf4f1;border-radius:11px}
-  .muted{color:var(--muted);font-size:13px}
+  .muted{color:var(--muted);font-size:14px}
 </style>
 </head>
 <body>
@@ -93,6 +95,7 @@
     <div class="card">
       <button class="btn block big" onclick="goMap()"><span>Mapa das mesas</span><span>&rarr;</span></button>
       <button class="btn block big ghost" style="margin-top:10px" onclick="goList()"><span>Lista de reservas</span><span>&rarr;</span></button>
+      <button class="btn block big ghost" style="margin-top:10px" onclick="goMesas()"><span>Configurar mesas</span><span>&rarr;</span></button>
       <div style="text-align:center;margin-top:14px"><button class="link" onclick="logout()">Sair</button></div>
     </div>
   </section>
@@ -100,16 +103,15 @@
   <section id="mapScreen" class="hidden">
     <div class="card">
       <div class="slotbar">
-        <div class="slotbtn" id="sb19" onclick="setSlot('19:00')"><div class="h">19:00</div><div class="c"><b id="free19">–</b> livres de 9</div></div>
-        <div class="slotbtn" id="sb21" onclick="setSlot('21:00')"><div class="h">21:00</div><div class="c"><b id="free21">–</b> livres de 8</div></div>
+        <div class="slotbtn" id="sb19" onclick="setSlot('19:00')"><div class="h">19:00</div><div class="c"><b id="free19">–</b> livres de <span id="tot19">–</span></div></div>
+        <div class="slotbtn" id="sb21" onclick="setSlot('21:00')"><div class="h">21:00</div><div class="c"><b id="free21">–</b> livres de <span id="tot21">–</span></div></div>
       </div>
       <div class="legend">
         <span><i class="sw" style="background:#f4faf6;border-color:#cfe9da"></i>Livre</span>
         <span><i class="sw" style="background:#fff4dc;border-color:#f0dca0"></i>Aguardando</span>
         <span><i class="sw" style="background:#e8f6ee;border-color:#bfe6cf"></i>Confirmada</span>
       </div>
-      <div class="maphint">A mesa grande vira as mesas 9 e 10 às 19h; e a mesa 5 (8 lugares) às 21h.</div>
-      <div class="mapscroll"><div class="maparea" id="map"></div></div>
+      <div class="maparea" id="map"></div>
       <div class="toolbar" style="margin-top:12px">
         <button class="btn ghost sm" onclick="goHome()">&larr; Voltar</button>
         <div><button class="link" onclick="reloadMap()" style="margin-right:12px">Atualizar</button><button class="btn sm" onclick="openForm({})">+ Nova reserva</button></div>
@@ -121,6 +123,14 @@
     <div class="card">
       <div class="toolbar"><button class="btn ghost sm" onclick="goHome()">&larr; Voltar</button><button class="link" onclick="exportCSV()">Exportar CSV</button></div>
       <div id="listBody" style="margin-top:8px"></div>
+    </div>
+  </section>
+
+  <section id="mesasScreen" class="hidden">
+    <div class="card">
+      <div class="toolbar"><button class="btn ghost sm" onclick="goHome()">&larr; Voltar</button><button class="btn sm" onclick="openMesaForm()">+ Adicionar mesa</button></div>
+      <div class="muted" style="margin-top:8px">Defina as mesas do salão: nome, capacidade e em quais horários cada uma aparece.</div>
+      <div id="mesasBody" style="margin-top:8px"></div>
     </div>
   </section>
 </div>
@@ -159,52 +169,68 @@
   </div>
 </div></div>
 
+<div class="ov hidden" id="mesaFormOv"><div class="panel">
+  <h2 id="mfTitle">Nova mesa</h2>
+  <label for="mf_nome">Nome / número da mesa</label>
+  <input id="mf_nome" type="text" placeholder="Ex.: 11">
+  <label for="mf_cap">Capacidade (lugares)</label>
+  <select id="mf_cap"></select>
+  <label>Aparece em quais horários?</label>
+  <div class="chk">
+    <label><input type="checkbox" id="mf_19"> 19:00</label>
+    <label><input type="checkbox" id="mf_21"> 21:00</label>
+  </div>
+  <div class="err" id="mfErr"></div>
+  <div style="display:flex;gap:9px;margin-top:16px">
+    <button class="btn ghost sm" style="flex:1" onclick="closeOv()">&larr; Voltar</button>
+    <button class="btn sm" style="flex:2" id="mfSave" onclick="saveMesa()">Salvar mesa</button>
+  </div>
+</div></div>
+
 <script>
   var SUPA="https://zuieqbiesotjflnhaqft.supabase.co";
   var API=SUPA+"/functions/v1/api";
   var ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1aWVxYmllc290amZsbmhhcWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODQ1MzIsImV4cCI6MjA5NjM2MDUzMn0.xDRvjJdXhkPh7D-1cv5CCCl_bceXnAf3B55a_wCrJjM";
 
-  var POS={'1':[1,2],'2':[2,2],'3':[3,2],'4':[4,2],'6':[5,2],'8':[2,3],'7':[4,3]};
-  var reservas=[];
-  var curSlot='19:00', editId=null, fSlot=null, pwd=null, dragId=null;
+  var reservas=[], mesas=[];
+  var curSlot='19:00', editId=null, fSlot=null, pwd=null, dragId=null, mesaEditId=null;
 
   function apiCall(action,extra){
     return fetch(API,{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},
       body:JSON.stringify(Object.assign({password:pwd,action:action},extra||{}))});
   }
-
-  function slotsFor(h){
-    if(h==='19:00') return ['1','2','3','4','6','7','8','9','10'].map(function(n){return {mesa:n,cap:2};});
-    return ['1','2','3','4','6','7','8'].map(function(n){return {mesa:n,cap:2};}).concat([{mesa:'5',cap:8}]);
-  }
-  function capOf(h,mesa){ return (mesa==='5'&&h==='21:00')?8:2; }
+  function jss(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+  function mesasFor(h){ return mesas.filter(function(m){return h==='19:00'?m.em_19:m.em_21;}); }
+  function slotsFor(h){ return mesasFor(h).map(function(m){return {mesa:m.nome,cap:m.capacidade};}); }
+  function capOf(h,nome){ var m=mesas.find(function(x){return String(x.nome)===String(nome);}); return m?m.capacidade:2; }
   function resForKey(h,mesa){ return reservas.find(function(r){ return r.horario===h && String(r.mesa)===String(mesa) && r.status!=='cancelada'; }); }
   function freeCount(h){ return slotsFor(h).filter(function(s){return !resForKey(h,s.mesa);}).length; }
   function cellState(mesa){ var r=resForKey(curSlot,mesa); return r?{key:r.status,res:r}:{key:'livre',res:null}; }
   function labelOf(k){ return k==='confirmada'?'Confirmada':k==='aguardando'?'Aguardando':'Livre'; }
   function firstName(s){ return String(s).split(' ').slice(0,2).join(' '); }
 
-  function show(id){ ['loginScreen','homeScreen','mapScreen','listScreen'].forEach(function(s){document.getElementById(s).classList.add('hidden');}); document.getElementById(id).classList.remove('hidden'); window.scrollTo(0,0); }
+  function show(id){ ['loginScreen','homeScreen','mapScreen','listScreen','mesasScreen'].forEach(function(s){document.getElementById(s).classList.add('hidden');}); document.getElementById(id).classList.remove('hidden'); window.scrollTo(0,0); }
 
   async function login(){
     var p=document.getElementById('pwd').value; var err=document.getElementById('loginErr'); var btn=document.getElementById('loginBtn');
     if(!p){ err.textContent='Digite a senha.'; return; }
     err.textContent=''; btn.disabled=true; btn.textContent='Entrando...';
     try{
-      var res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},body:JSON.stringify({password:p,action:'list'})});
+      var res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','apikey':ANON,'Authorization':'Bearer '+ANON},body:JSON.stringify({password:p,action:'bootstrap'})});
       if(res.status===401){ err.textContent='Senha incorreta.'; return; }
       if(!res.ok){ err.textContent='Erro ao conectar. Tente de novo.'; return; }
-      var j=await res.json(); reservas=j.data||[]; pwd=p; show('homeScreen');
+      var j=await res.json(); reservas=j.reservas||[]; mesas=j.mesas||[]; pwd=p; show('homeScreen');
     }catch(e){ err.textContent='Sem conexão. Verifique a internet.'; }
     finally{ btn.disabled=false; btn.textContent='Entrar'; }
   }
-  function logout(){ pwd=null; reservas=[]; document.getElementById('pwd').value=''; show('loginScreen'); }
+  function logout(){ pwd=null; reservas=[]; mesas=[]; document.getElementById('pwd').value=''; show('loginScreen'); }
   function goHome(){ show('homeScreen'); }
   async function goMap(){ show('mapScreen'); setSlot(curSlot); await reloadMap(); }
   async function goList(){ await refresh(); renderList(); show('listScreen'); }
+  async function goMesas(){ await refresh(); renderMesas(); show('mesasScreen'); }
   async function reloadMap(){ await refresh(); renderMap(); }
 
-  async function refresh(){ try{ var r=await apiCall('list',{}); var j=await r.json(); if(j.data) reservas=j.data; }catch(e){} }
+  async function refresh(){ try{ var r=await apiCall('bootstrap',{}); var j=await r.json(); if(j.reservas) reservas=j.reservas; if(j.mesas) mesas=j.mesas; }catch(e){} }
 
   function setSlot(s){
     curSlot=s;
@@ -215,31 +241,25 @@
   function renderMap(){
     document.getElementById('free19').textContent=freeCount('19:00');
     document.getElementById('free21').textContent=freeCount('21:00');
-    var html='';
-    if(curSlot==='19:00'){ html+='<div class="toprow" style="grid-column:2/5;grid-row:1">'+tileHTML('9','flex:1')+tileHTML('10','flex:1')+'</div>'; }
-    else { html+=m5_21(); }
-    html+=tileHTML('1','grid-column:1;grid-row:2')+tileHTML('2','grid-column:2;grid-row:2')+tileHTML('3','grid-column:3;grid-row:2')+tileHTML('4','grid-column:4;grid-row:2')+tileHTML('6','grid-column:5;grid-row:2');
-    html+=tileHTML('8','grid-column:2;grid-row:3')+tileHTML('7','grid-column:4;grid-row:3');
-    document.getElementById('map').innerHTML=html;
+    document.getElementById('tot19').textContent=mesasFor('19:00').length;
+    document.getElementById('tot21').textContent=mesasFor('21:00').length;
+    var arr=slotsFor(curSlot);
+    var html=arr.map(function(s){ return tileHTML(s.mesa,s.cap); }).join('');
+    document.getElementById('map').innerHTML=arr.length?html:'<div class="muted" style="padding:12px">Nenhuma mesa neste horário. Use "Configurar mesas".</div>';
   }
-  function tileHTML(n,style){
+  function tileHTML(n,cap){
     var st=cellState(n);
+    var span=cap>=4?' style="grid-column:span 2"':'';
     var drag=st.res?(' draggable="true" ondragstart="onDragStart(event,\''+st.res.id+'\')"'):'';
-    return '<div class="tile '+st.key+'" style="'+style+'"'+drag+' ondragover="onDragOver(event)" ondrop="onDrop(event,\''+n+'\')" '+
-      'onmouseenter="showTip(event,\''+n+'\')" onmousemove="moveTip(event)" onmouseleave="hideTip()" onclick="clickSlot(\''+n+'\')">'+
-      '<div class="mn">Mesa '+n+'</div>'+(st.res?'<div class="who">'+esc(firstName(st.res.nome))+'</div>':'<div class="seats">2 lug.</div>')+
+    return '<div class="tile '+st.key+'"'+span+drag+' ondragover="onDragOver(event)" ondrop="onDrop(event,\''+jss(n)+'\')" '+
+      'onmouseenter="showTip(event,\''+jss(n)+'\')" onmousemove="moveTip(event)" onmouseleave="hideTip()" onclick="clickSlot(\''+jss(n)+'\')">'+
+      '<div class="mn">Mesa '+esc(n)+'</div>'+(st.res?'<div class="who">'+esc(firstName(st.res.nome))+'</div>':'<div class="seats">'+cap+' lug.</div>')+
       '<div class="st">'+labelOf(st.key)+'</div></div>';
-  }
-  function m5_21(){
-    var st=cellState('5');
-    var drag=st.res?(' draggable="true" ondragstart="onDragStart(event,\''+st.res.id+'\')"'):'';
-    return '<div class="tile '+st.key+'" style="grid-column:2/5;grid-row:1"'+drag+' ondragover="onDragOver(event)" ondrop="onDrop(event,\'5\')" onmouseenter="showTip(event,\'5\')" onmousemove="moveTip(event)" onmouseleave="hideTip()" onclick="clickSlot(\'5\')">'+
-      '<div class="mn">Mesa 5 · grupo de 8</div>'+(st.res?'<div class="who">'+esc(st.res.nome)+'</div>':'<div class="seats">8 lugares</div>')+'<div class="st">'+labelOf(st.key)+'</div></div>';
   }
 
   function showTip(e,mesa){
     var st=cellState(mesa); var tip=document.getElementById('tip');
-    var head='<b>Mesa '+mesa+'</b> · ';
+    var head='<b>Mesa '+esc(mesa)+'</b> · ';
     if(st.key==='livre'){ tip.innerHTML=head+'Livre<br>clique para reservar'; }
     else{ var r=st.res; tip.innerHTML=head+labelOf(st.key)+'<br>'+esc(r.nome)+' · '+r.pessoas+(r.pessoas>1?' pessoas':' pessoa')+(r.tel?'<br>'+esc(r.tel):''); }
     tip.style.display='block'; moveTip(e);
@@ -279,15 +299,15 @@
       var mesa=opts.mesa;
       fSlot={horario:horario,mesa:mesa,cap:capOf(horario,mesa)};
       sel.classList.add('hidden'); lbl.classList.remove('hidden');
-      lbl.textContent='Mesa '+mesa+(mesa==='5'&&horario==='21:00'?' (grupo de 8)':'');
-      fillPessoas(fSlot.cap, fSlot.cap===8?8:2);
+      lbl.textContent='Mesa '+mesa;
+      fillPessoas(fSlot.cap, Math.min(2,fSlot.cap));
     } else {
       lbl.classList.add('hidden'); sel.classList.remove('hidden');
       var cur=r?String(r.mesa):null;
       var livres=slotsFor(horario).filter(function(s){return !resForKey(horario,s.mesa) || String(s.mesa)===cur;});
-      sel.innerHTML=livres.length?livres.map(function(s){return '<option value="'+s.mesa+'">'+slotName(s,horario)+'</option>';}).join(''):'<option value="">Sem mesas livres</option>';
+      sel.innerHTML=livres.length?livres.map(function(s){return '<option value="'+esc(s.mesa)+'">'+slotName(s)+'</option>';}).join(''):'<option value="">Sem mesas livres</option>';
       var ini=cur||(livres[0]&&livres[0].mesa);
-      if(ini){ sel.value=ini; fSlot={horario:horario,mesa:ini,cap:capOf(horario,ini)}; fillPessoas(fSlot.cap, r?r.pessoas:(fSlot.cap===8?8:2)); }
+      if(ini){ sel.value=ini; fSlot={horario:horario,mesa:ini,cap:capOf(horario,ini)}; fillPessoas(fSlot.cap, r?r.pessoas:Math.min(2,fSlot.cap)); }
       else { fSlot=null; fillPessoas(2,2); }
     }
     document.getElementById('f_nome').value=r?r.nome:'';
@@ -296,16 +316,16 @@
     document.getElementById('f_obs').value=r?(r.obs||''):'';
     openOv('formOv');
   }
-  function slotName(s,h){ if(s.mesa==='5'&&h==='21:00') return 'Mesa 5 · grupo (8)'; return 'Mesa '+s.mesa; }
+  function slotName(s){ return 'Mesa '+s.mesa+(s.cap>2?' ('+s.cap+' lug.)':''); }
   function onMesaChange(){
     var v=document.getElementById('f_mesa').value; if(!v){fSlot=null;return;}
     var h=document.getElementById('f_horario').textContent;
-    fSlot={horario:h,mesa:v,cap:capOf(h,v)}; fillPessoas(fSlot.cap, fSlot.cap===8?8:2);
+    fSlot={horario:h,mesa:v,cap:capOf(h,v)}; fillPessoas(fSlot.cap, Math.min(2,fSlot.cap));
   }
   function fillPessoas(cap,val){
     var sel=document.getElementById('f_pessoas'); var o='';
     for(var i=1;i<=cap;i++) o+='<option value="'+i+'">'+i+(i>1?' pessoas':' pessoa')+'</option>';
-    sel.innerHTML=o; sel.value=String(Math.min(val||2,cap));
+    sel.innerHTML=o; sel.value=String(Math.min(val||1,cap));
   }
   async function saveReserva(){
     var nome=document.getElementById('f_nome').value.trim();
@@ -348,12 +368,67 @@
     var arr=reservas.slice().filter(function(r){return r.status!=='cancelada';}).sort(function(a,b){ return a.horario!==b.horario?(a.horario<b.horario?-1:1):(String(a.mesa).localeCompare(String(b.mesa),undefined,{numeric:true})); });
     document.getElementById('listBody').innerHTML='<h2 style="font-size:17px;margin:6px 0 6px">Reservas ('+arr.length+')</h2>'+(arr.length?arr.map(function(r){
       return '<div style="border-bottom:1px solid var(--line);padding:9px 2px;display:flex;justify-content:space-between;gap:10px">'+
-        '<div><b>'+esc(r.nome)+'</b><div style="font-size:13px;color:var(--muted)">'+r.horario+' · mesa '+r.mesa+' · '+r.pessoas+'p'+(r.tel?' · '+esc(r.tel):'')+'</div></div>'+
+        '<div><b>'+esc(r.nome)+'</b><div style="font-size:13px;color:var(--muted)">'+r.horario+' · mesa '+esc(r.mesa)+' · '+r.pessoas+'p'+(r.tel?' · '+esc(r.tel):'')+'</div></div>'+
         '<span class="pill '+r.status+'">'+labelOf(r.status)+'</span></div>';
     }).join(''):'<div class="muted">Nenhuma reserva ainda.</div>');
   }
+
+  /* ===== configurar mesas ===== */
+  function renderMesas(){
+    var body=document.getElementById('mesasBody');
+    var arr=mesas.slice().sort(function(a,b){ return (a.ordem-b.ordem) || String(a.nome).localeCompare(String(b.nome),undefined,{numeric:true}); });
+    body.innerHTML='<h2 style="font-size:17px;margin:6px 0 4px">Mesas ('+arr.length+')</h2>'+(arr.length?arr.map(function(m){
+      return '<div class="mrow"><div><b>Mesa '+esc(m.nome)+'</b> · '+m.capacidade+' lug.'+
+        '<span class="badge'+(m.em_19?' on':'')+'">19h</span><span class="badge'+(m.em_21?' on':'')+'">21h</span></div>'+
+        '<div style="display:flex;gap:7px"><button class="btn ghost sm" onclick="openMesaForm(\''+m.id+'\')">Editar</button>'+
+        '<button class="btn ghost sm" onclick="delMesa(\''+m.id+'\',\''+jss(m.nome)+'\')">Excluir</button></div></div>';
+    }).join(''):'<div class="muted">Nenhuma mesa cadastrada.</div>');
+  }
+  function fillCap(val){
+    var sel=document.getElementById('mf_cap'); var o='';
+    for(var i=1;i<=12;i++) o+='<option value="'+i+'">'+i+(i>1?' lugares':' lugar')+'</option>';
+    sel.innerHTML=o; sel.value=String(val||2);
+  }
+  function openMesaForm(id){
+    mesaEditId=id||null;
+    document.getElementById('mfErr').textContent='';
+    var m=mesaEditId?mesas.find(function(x){return x.id===mesaEditId;}):null;
+    document.getElementById('mfTitle').textContent=mesaEditId?'Editar mesa':'Nova mesa';
+    document.getElementById('mf_nome').value=m?m.nome:'';
+    fillCap(m?m.capacidade:2);
+    document.getElementById('mf_19').checked=m?m.em_19:true;
+    document.getElementById('mf_21').checked=m?m.em_21:true;
+    openOv('mesaFormOv');
+  }
+  async function saveMesa(){
+    var nome=document.getElementById('mf_nome').value.trim().replace(/['"\\]/g,'');
+    var cap=Number(document.getElementById('mf_cap').value);
+    var e19=document.getElementById('mf_19').checked, e21=document.getElementById('mf_21').checked;
+    var err=document.getElementById('mfErr'); var btn=document.getElementById('mfSave');
+    if(nome.length<1){ err.textContent='Informe o nome/número da mesa.'; return; }
+    if(!e19 && !e21){ err.textContent='Selecione ao menos um horário.'; return; }
+    err.textContent=''; btn.disabled=true; btn.textContent='Salvando...';
+    try{
+      var res;
+      if(mesaEditId){ res=await apiCall('mesa_update',{id:mesaEditId,data:{nome:nome,capacidade:cap,em_19:e19,em_21:e21}}); }
+      else { var ordem=mesas.reduce(function(a,m){return Math.max(a,m.ordem||0);},0)+1; res=await apiCall('mesa_add',{data:{nome:nome,capacidade:cap,em_19:e19,em_21:e21,ordem:ordem}}); }
+      var j=await res.json();
+      if(!res.ok){ err.textContent='Erro ao salvar a mesa.'; return; }
+      closeOv(); await refresh(); renderMesas(); renderMap();
+    }catch(e){ err.textContent='Sem conexão. Tente de novo.'; }
+    finally{ btn.disabled=false; btn.textContent='Salvar mesa'; }
+  }
+  async function delMesa(id,nome){
+    if(!confirm('Excluir a Mesa '+nome+'?')) return;
+    try{
+      var res=await apiCall('mesa_delete',{id:id,nome:nome}); var j=await res.json();
+      if(!res.ok){ alert(j.error==='em_uso'?'Não dá para excluir: há reserva ativa na Mesa '+nome+'. Cancele ou mova a reserva antes.':'Erro ao excluir.'); return; }
+      await refresh(); renderMesas(); renderMap();
+    }catch(e){ alert('Sem conexão.'); }
+  }
+
   function openOv(id){ document.getElementById(id).classList.remove('hidden'); }
-  function closeOv(){ document.getElementById('detailOv').classList.add('hidden'); document.getElementById('formOv').classList.add('hidden'); editId=null; }
+  function closeOv(){ ['detailOv','formOv','mesaFormOv'].forEach(function(o){document.getElementById(o).classList.add('hidden');}); editId=null; mesaEditId=null; }
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function exportCSV(){
     var head='Horario,Mesa,Nome,Pessoas,Contato,Status,Observacoes\n';
