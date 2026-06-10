@@ -208,7 +208,7 @@
   function jss(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
   function mesasFor(h){ return mesas.filter(function(m){return h==='19:00'?m.em_19:m.em_21;}); }
   function slotsFor(h){ return mesasFor(h).map(function(m){return {mesa:m.nome,cap:m.capacidade};}); }
-  function capOf(h,nome){ var m=mesas.find(function(x){return String(x.nome)===String(nome);}); return m?m.capacidade:2; }
+  function capOf(h,nome){ var m=mesas.find(function(x){return String(x.nome)===String(nome) && (h==='19:00'?x.em_19:x.em_21);}); return m?m.capacidade:2; }
   function resForKey(h,mesa){ return reservas.find(function(r){ return r.horario===h && String(r.mesa)===String(mesa) && r.status!=='cancelada'; }); }
   function freeCount(h){ return slotsFor(h).filter(function(s){return !resForKey(h,s.mesa);}).length; }
   function cellState(mesa){ var r=resForKey(curSlot,mesa); return r?{key:r.status,res:r}:{key:'livre',res:null}; }
@@ -453,7 +453,7 @@
     var err=document.getElementById('mfErr'); var btn=document.getElementById('mfSave');
     if(nome.length<1){ err.textContent='Informe o nome/número da mesa.'; return; }
     if(!e19 && !e21){ err.textContent='Selecione ao menos um horário.'; return; }
-    if(mesas.some(function(m){return m.id!==mesaEditId && String(m.nome)===nome;})){ err.textContent='Já existe uma mesa com o número '+nome+'. Escolha outro.'; return; }
+    if(mesas.some(function(m){return m.id!==mesaEditId && String(m.nome)===nome && ((e19&&m.em_19)||(e21&&m.em_21));})){ err.textContent='Já existe uma mesa '+nome+' nesse horário. Escolha outro número.'; return; }
     err.textContent=''; btn.disabled=true; btn.textContent='Salvando...';
     try{
       var res;
