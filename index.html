@@ -453,17 +453,18 @@
     var err=document.getElementById('mfErr'); var btn=document.getElementById('mfSave');
     if(nome.length<1){ err.textContent='Informe o nome/número da mesa.'; return; }
     if(!e19 && !e21){ err.textContent='Selecione ao menos um horário.'; return; }
+    if(mesas.some(function(m){return m.id!==mesaEditId && String(m.nome)===nome;})){ err.textContent='Já existe uma mesa com o número '+nome+'. Escolha outro.'; return; }
     err.textContent=''; btn.disabled=true; btn.textContent='Salvando...';
     try{
       var res;
-      if(mesaEditId){ res=await apiCall('mesa_update',{id:mesaEditId,data:{nome:nome,capacidade:cap,em_19:e19,em_21:e21}}); }
+      if(mesaEditId){ res=await apiCall('mesa_rename',{id:mesaEditId,data:{nome:nome,capacidade:cap,em_19:e19,em_21:e21}}); }
       else {
         var ordem=mesas.reduce(function(a,m){return Math.max(a,m.ordem||0);},0)+1;
         var linha=mesas.reduce(function(a,m){return Math.max(a,m.linha||1);},1)+1;
         res=await apiCall('mesa_add',{data:{nome:nome,capacidade:cap,em_19:e19,em_21:e21,ordem:ordem,linha:linha,coluna:1}});
       }
       var j=await res.json();
-      if(!res.ok){ err.textContent='Erro ao salvar a mesa.'; return; }
+      if(!res.ok){ err.textContent=((j.error==='nome_duplicado')||(j.code==='23505'))?('Já existe uma mesa com o número '+nome+'.'):'Erro ao salvar a mesa.'; return; }
       closeOv(); await refresh(); renderMesas(); renderMap();
     }catch(e){ err.textContent='Sem conexão. Tente de novo.'; }
     finally{ btn.disabled=false; btn.textContent='Salvar mesa'; }
